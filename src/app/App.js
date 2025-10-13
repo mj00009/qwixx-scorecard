@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import styled from 'styled-components/macro'
+iimport React, { useState, useEffect, useMemo } from 'react'
+import styled, { createGlobalStyle } from 'styled-components/macro'
 import { produce } from 'immer'
 import { startRows, startMissed } from './startData'
 import FieldRow, { FieldRowGrid } from './FieldRow'
@@ -7,6 +7,41 @@ import { save, load } from './localStorage'
 import Result from './Result'
 import Missed from './Missed'
 import Navigation from './Navigation'
+
+const GlobalStyle = createGlobalStyle`
+  :root {
+    --bg-light: #f5f6fa;
+    --bg-dark: #0d1117;
+    --glass-light: rgba(255, 255, 255, 0.7);
+    --glass-dark: rgba(20, 20, 20, 0.6);
+    --text-light: #111;
+    --text-dark: #eee;
+    --blur-amount: 20px;
+    --border-light: rgba(0, 0, 0, 0.1);
+    --border-dark: rgba(255, 255, 255, 0.1);
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg-light);
+    color: var(--text-light);
+    transition: background 0.4s ease, color 0.4s ease;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+`
 
 export default function App() {
   const [history, setHistory] = useState(load('qwixx-history') || null)
@@ -32,33 +67,36 @@ export default function App() {
   }, [history, rows, missed, forceGameOver])
 
   return (
-    <Wrapper>
-      <Rows>
-        {rows.map((row, rowIndex) => (
-          <FieldRow
-            key={row.name}
-            row={row}
-            rowIndex={rowIndex}
-            onFieldClick={onFieldClick}
-          />
-        ))}
-        <FieldRowGrid>
-          <div css="display: flex; grid-column: span 8; align-items: center">
-            {isGameOver && <Result rows={rows} missed={missed} />}
-          </div>
-          <div css="grid-column: span 4;">
-            <Missed missed={missed} onMissed={handleMissed} />
-          </div>
-        </FieldRowGrid>
-      </Rows>
-      <Navigation
-        isGameOver={isGameOver}
-        history={history}
-        reset={reset}
-        finish={finish}
-        undo={undo}
-      />
-    </Wrapper>
+    <>
+      <GlobalStyle />
+      <Wrapper>
+        <Content>
+          {rows.map((row, rowIndex) => (
+            <FieldRow
+              key={row.name}
+              row={row}
+              rowIndex={rowIndex}
+              onFieldClick={onFieldClick}
+            />
+          ))}
+          <FieldRowGrid>
+            <div style={{ display: 'flex', gridColumn: 'span 8', alignItems: 'center' }}>
+              {isGameOver && <Result rows={rows} missed={missed} />}
+            </div>
+            <div style={{ gridColumn: 'span 4' }}>
+              <Missed missed={missed} onMissed={handleMissed} />
+            </div>
+          </FieldRowGrid>
+        </Content>
+        <Navigation
+          isGameOver={isGameOver}
+          history={history}
+          reset={reset}
+          finish={finish}
+          undo={undo}
+        />
+      </Wrapper>
+    </>
   )
 
   function handleMissed(index) {
@@ -102,22 +140,14 @@ export default function App() {
   }
 
   function onFieldClick(rowIndex, boxIndex) {
-    if (isGameOver || forceGameOver) {
-      return
-    }
+    if (isGameOver || forceGameOver) return
 
     const isLock = boxIndex === 11
-
-    if (isLock) {
-      return lockRow(rowIndex)
-    }
+    if (isLock) return lockRow(rowIndex)
 
     const is12AndAllowed =
       boxIndex === 10 &&
-      rows[rowIndex].boxes.reduce(
-        (acc, box) => (box.checked ? acc + 1 : acc),
-        0
-      ) >= 5
+      rows[rowIndex].boxes.reduce((acc, box) => (box.checked ? acc + 1 : acc), 0) >= 5
 
     setHistory({ rows, missed })
 
@@ -142,14 +172,39 @@ export default function App() {
   }
 }
 
-const Rows = styled.div`
-  display: grid;
-  gap: 2px;
+const Wrapper = styled.main`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 100vh;
+  padding: 1rem;
+  backdrop-filter: blur(var(--blur-amount));
+  background: var(--glass-light);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  margin: auto;
+  max-width: 900px;
+  width: 95%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transition: background 0.4s ease, border 0.4s ease, box-shadow 0.4s ease;
+
+  @media (prefers-color-scheme: dark) {
+    background: var(--glass-dark);
+    border: 1px solid var(--border-dark);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  }
 `
 
-const Wrapper = styled.main`
+const Content = styled.div`
   display: grid;
-  grid-template-rows: 5fr 1fr;
-  background: white;
-  height: 100%;
+  gap: 8px;
+  width: 100%;
+  overflow: auto;
+  flex: 1;
+  padding-bottom: 1rem;
+
+  @media (max-width: 600px) {
+    gap: 4px;
+  }
 `
